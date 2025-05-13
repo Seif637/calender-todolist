@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PQI Calendar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/c92986acdf.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Epilogue', sans-serif;
+        }
+
+        .clearfix::after {
+            content: ' ';
+            display: block;
+            clear: both;
+        }
+
+        li {
+            list-style: none;
+        }
+
+        body {
+            background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 40px auto;
+            gap: 32px;
+            border-radius: 18px;
+            box-shadow: 0 8px 32px rgba(44, 62, 80, 0.13);
+            background: rgba(255,255,255,0.85);
+            padding: 30px 20px;
+        }
+
+        .main, .todo {
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(44, 62, 80, 0.08);
+            background: #fff;
+            transition: box-shadow 0.2s;
+        }
+
+        .main {
+            width: 850px;
+            padding: 32px 28px;
+        }
+
+        .todo {
+            width: 480px;
+            padding: 32px 28px;
+        }
+
+        .main-title, .todo-title {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 18px;
+            color: #1976d2;
+            text-shadow: 0 2px 8px #e3f2fd;
+        }
+
+        .month-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+
+        .month-name {
+            color: #34495e;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .nav-btn {
+            background: linear-gradient(135deg, #1976d2 60%, #64b5f6 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+            box-shadow: 0 2px 6px #b3c6e7;
+        }
+
+        .nav-btn:hover {
+            background: linear-gradient(135deg, #1565c0 60%, #42a5f5 100%);
+            transform: scale(1.08);
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            margin-bottom: 8px;
+            text-align: center;
+            font-weight: 600;
+            color: #90a4ae;
+            font-size: 16px;
+        }
+
+        .days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+        }
+
+        .day {
+            background: #f4f8fb;
+            padding: 14px 0 10px 0;
+            min-height: 90px;
+            border-radius: 8px;
+            font-size: 16px;
+            box-shadow: 0 1px 3px #e3eafc;
+            border: 1px solid #e3eafc;
+            transition: background 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+
+        .day:hover {
+            background: #e3f2fd;
+            box-shadow: 0 2px 8px #b3c6e7;
+            cursor: pointer;
+        }
+
+        .day-number {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .other-month {
+            color: #b0bec5;
+            background: #f0f4f8;
+        }
+
+        .today {
+            background: #fffde7;
+            border: 2px solid #ffe082;
+        }
+
+        .today .day-number {
+            color: #fbc02d;
+            font-weight: 600;
+        }
+
+        .has-todo::after {
+            content: '';
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            background: #e74c3c;
+            border-radius: 50%;
+            border: 2px solid #fff;
+        }
+
+        .todo-input-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+
+        .todo-input, #priority-select, #category-input, #reminder-input, #recurrence-select, #attachment-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #b0bec5;
+            border-radius: 6px;
+            font-size: 15px;
+            background: #f8fafc;
+            transition: border 0.2s;
+            margin-bottom: 4px;
+        }
+
+        .todo-input:focus, #priority-select:focus, #category-input:focus, #reminder-input:focus, #recurrence-select:focus, #attachment-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .todo-btn, .add-subtask-btn, #dark-mode-toggle {
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            box-shadow: 0 1px 3px #e3eafc;
+            border: none;
+            padding: 10px 16px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .todo-btn.add {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: #fff;
+        }
+
+        .todo-btn.add:hover {
+            background: linear-gradient(135deg, #38f9d7 0%, #43e97b 100%);
+        }
+
+        .todo-btn.reset {
+            background: #b0bec5;
+            color: #fff;
+        }
+
+        .todo-btn.reset:hover {
+            background: #7f8c8d;
+        }
+
+        .todo-btn.allreset {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        .todo-btn.allreset:hover {
+            background: #c0392b;
+        }
+
+        .todo-btn.print {
+            background: #1976d2;
+            color: #fff;
+        }
+
+        .todo-btn.print:hover {
+            background: #1565c0;
+        }
+
+        .todo-btn#print-btn, .todo-btn#print-btn:hover {
+            background: #1976d2;
+            color: #fff;
+        }
+
+        .todo-btn#export-btn {
+            background: #8e44ad;
+            color: #fff;
+        }
+
+        .todo-btn#export-btn:hover {
+            background: #6c3483;
+        }
+
+        .todo-btn#import-btn {
+            background: #00b894;
+            color: #fff;
+        }
+
+        .todo-btn#import-btn:hover {
+            background: #00897b;
+        }
+
+        #dark-mode-toggle {
+            background: #23272f;
+            color: #fff;
+            border: none;
+            font-size: 18px;
+            padding: 7px 12px;
+        }
+
+        .todo-list {
+            margin-top: 18px;
+        }
+
+        .todo-item {
+            padding: 16px 18px;
+            margin-bottom: 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: box-shadow 0.2s, background 0.2s;
+            flex-direction: column;
+            box-shadow: 0 1px 4px #e3eafc;
+        }
+
+        .todo-item:hover {
+            background: #e3f2fd;
+            box-shadow: 0 2px 12px #b3c6e7;
+        }
+
+        .todo-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            gap: 10px;
+        }
+
+        .todo-text {
+            flex: 1;
+            margin-right: 10px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .delete-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 15px;
+            margin-left: 4px;
+            transition: all 0.2s;
+        }
+
+        .delete-btn:hover {
+            background: #c0392b;
+            transform: scale(1.1);
+        }
+
+        .selected-date {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .subtask-container {
+            width: 100%;
+            margin-top: 12px;
+            padding-left: 18px;
+            border-left: 3px solid #1976d2;
+            background: #f7fafd;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .subtask-list {
+            margin-top: 5px;
+        }
+
+        .subtask-item {
+            display: flex;
+            align-items: center;
+            padding: 7px 0;
+            border-bottom: 1px solid #e3eafc;
+        }
+
+        .subtask-input-container {
+            display: flex;
+            margin-top: 5px;
+            gap: 6px;
+        }
+
+        .subtask-input {
+            flex: 1;
+            padding: 7px 10px;
+            border: 1px solid #b0bec5;
+            border-radius: 6px;
+            font-size: 14px;
+            background: #f8fafc;
+        }
+
+        .add-subtask-btn {
+            background: #1976d2;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 7px 14px;
+            font-size: 13px;
+        }
+
+        .add-subtask-btn:hover {
+            background: #1565c0;
+        }
+
+        .subtask-text {
+            flex: 1;
+            font-size: 13px;
+        }
+
+        .subtask-delete-btn {
+            background: #e74c3c;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .subtask-delete-btn:hover {
+            background: #c0392b;
+        }
+
+        .subtask-toggle {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        .completed {
+            text-decoration: line-through;
+            color: #95a5a6;
+        }
+
+        .subtask-count {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-left: 5px;
+        }
+
+        @media (max-width: 1200px) {
+            .container {
+                flex-direction: column;
+                max-width: 800px;
+            }
+            .main, .todo {
+                width: 100%;
+            }
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .todo, .todo * {
+                visibility: visible;
+            }
+            .todo {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                box-shadow: none;
+            }
+            .todo-input-container, .print-btn {
+                display: none !important;
+            }
+        }
+
+        .priority-high { border-left: 5px solid #e74c3c; background: #fdecea; }
+        .priority-medium { border-left: 5px solid #f1c40f; background: #fffbe6; }
+        .priority-low { border-left: 5px solid #2ecc71; background: #eafaf1; }
+        .priority-label { font-size: 13px; margin-left: 8px; font-weight: 600; padding: 2px 8px; border-radius: 8px; }
+        .priority-high .priority-label { background: #e74c3c; color: #fff; }
+        .priority-medium .priority-label { background: #f1c40f; color: #fff; }
+        .priority-low .priority-label { background: #2ecc71; color: #fff; }
+        .task-completed .todo-text { text-decoration: line-through; color: #95a5a6; }
+        .category-tag { background: #dfe6e9; color: #636e72; border-radius: 6px; font-size: 12px; padding: 2px 8px; margin-left: 8px; }
+        .progress-bar-bg { width: 100%; background: #ecf0f1; height: 7px; border-radius: 4px; margin-top: 8px; }
+        .progress-bar { height: 7px; border-radius: 4px; background: #1976d2; }
+        body.dark-mode { background: linear-gradient(135deg, #23272f 0%, #23272f 100%); color: #f5f6fa; }
+        body.dark-mode .container { background: rgba(44,62,80,0.95); box-shadow: 0 8px 32px rgba(44, 62, 80, 0.33); }
+        body.dark-mode .main, body.dark-mode .todo { background: #23272f; color: #f5f6fa; box-shadow: 0 2px 12px #23272f; }
+        body.dark-mode .day { background: #353b48; color: #f5f6fa; border-color: #23272f; }
+        body.dark-mode .other-month { background: #23272f; color: #636e72; }
+        body.dark-mode .today { background: #636e72; border-color: #636e72; }
+        body.dark-mode .todo-item { background: #353b48; color: #f5f6fa; }
+        body.dark-mode .todo-input, body.dark-mode .subtask-input, body.dark-mode #priority-select, body.dark-mode #category-input, body.dark-mode #reminder-input, body.dark-mode #recurrence-select { background: #23272f; color: #f5f6fa; border-color: #636e72; }
+        body.dark-mode .todo-btn, body.dark-mode .add-subtask-btn, body.dark-mode #dark-mode-toggle { background: #636e72; color: #fff; }
+        body.dark-mode .category-tag { background: #636e72; color: #dfe6e9; }
+        body.dark-mode .progress-bar-bg { background: #636e72; }
+
+        /* Modern file input styles */
+        .custom-file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            max-width: 180px;
+            margin-bottom: 4px;
+        }
+        .custom-file-input {
+            opacity: 0;
+            width: 100%;
+            height: 42px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
+        .custom-file-label {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            background: linear-gradient(135deg, #6366f1 0%, #60a5fa 100%);
+            color: #fff;
+            border-radius: 10px;
+            padding: 10px 18px;
+            font-size: 1rem;
+            font-weight: 600;
+            box-shadow: 0 2px 8px #e3eafc;
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s;
+            border: none;
+            width: 100%;
+            min-width: 120px;
+            position: relative;
+            z-index: 1;
+        }
+        .custom-file-label:hover {
+            background: linear-gradient(135deg, #4338ca 0%, #2563eb 100%);
+            box-shadow: 0 4px 16px #b3c6e7;
+        }
+        .custom-file-label .fa-paperclip {
+            font-size: 1.2em;
+        }
+        .custom-file-label .file-name {
+            font-size: 0.98em;
+            color: #e0eafc;
+            margin-left: 8px;
+            max-width: 90px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        /* Responsive for file input */
+        @media (max-width: 700px) {
+            .custom-file-input-wrapper { max-width: 98vw; }
+            .custom-file-label { min-width: 0; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <section class="main">
+            <h1 class="main-title">PQI Calendar</h1>
+            <div class="month-controls clearfix">
+                <button class="nav-btn prev-month">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <p class="month-name"></p>
+                <button class="nav-btn next-month">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div class="weekdays">
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+                <div>Sun</div>
+            </div>
+            <div class="days" id="calendar-days"></div>
+        </section>
+
+        <section class="todo">
+            <h1 class="todo-title">Task Manager</h1>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                <p class="selected-date" id="selected-date-display">No date selected</p>
+                <input type="text" id="search-bar" placeholder="Search tasks..." style="flex:1;max-width:200px;padding:5px 10px;border-radius:4px;border:1px solid #ddd;">
+                <button id="dark-mode-toggle" class="todo-btn" style="padding:5px 10px;">🌙</button>
+            </div>
+            <div class="todo-input-container">
+                <input type="text" class="todo-input" placeholder="Add a new task...">
+                <select id="priority-select" style="padding:10px 5px;border-radius:4px;border:1px solid #ddd;">
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="low">Low</option>
+                </select>
+                <input type="text" id="category-input" placeholder="Category/Tag" style="padding:10px 5px;border-radius:4px;border:1px solid #ddd;max-width:90px;">
+                <input type="datetime-local" id="reminder-input" style="padding:10px 5px;border-radius:4px;border:1px solid #ddd;max-width:150px;">
+                <select id="recurrence-select" style="padding:10px 5px;border-radius:4px;border:1px solid #ddd;">
+                    <option value="">No Repeat</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+                <!-- Modern file input -->
+                <div class="custom-file-input-wrapper">
+                    <input type="file" id="attachment-input" class="custom-file-input">
+                    <label for="attachment-input" class="custom-file-label">
+                        <i class="fas fa-paperclip"></i>
+                        <span class="file-label-text">Choose File</span>
+                        <span class="file-name" id="file-name"></span>
+                    </label>
+                </div>
+                <button class="todo-btn add">Add</button>
+                <button class="todo-btn reset">Clear</button>
+                <button class="todo-btn allreset">Clear All</button>
+                <button class="todo-btn print">Print</button>
+                <button class="todo-btn" id="export-btn" title="Export PDF">Export PDF</button>
+                <button class="todo-btn" id="import-btn" title="Import JSON">Import</button>
+                <input type="file" id="import-file" accept=".json" style="display:none;">
+            </div>
+            <ul class="todo-list" id="todo-list"></ul>
+        </section>
+    </div>
+    <footer style="text-align:center; color:#7f8c8d; margin: 30px 0 10px 0; font-size: 15px;">
+        Made by Seif
+    </footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const monthNameEl = document.querySelector('.month-name');
+            const calendarDaysEl = document.getElementById('calendar-days');
+            const prevMonthBtn = document.querySelector('.prev-month');
+            const nextMonthBtn = document.querySelector('.next-month');
+            const todoInput = document.querySelector('.todo-input');
+            const addTodoBtn = document.querySelector('.add');
+            const resetTodoBtn = document.querySelector('.reset');
+            const allResetTodoBtn = document.querySelector('.allreset');
+            const printBtn = document.querySelector('.todo-btn.print');
+            const todoListEl = document.getElementById('todo-list');
+            const selectedDateDisplay = document.getElementById('selected-date-display');
+            const prioritySelect = document.getElementById('priority-select');
+            const categoryInput = document.getElementById('category-input');
+            const reminderInput = document.getElementById('reminder-input');
+            const recurrenceSelect = document.getElementById('recurrence-select');
+            const attachmentInput = document.getElementById('attachment-input');
+            const searchBar = document.getElementById('search-bar');
+            const darkModeToggle = document.getElementById('dark-mode-toggle');
+            const exportBtn = document.getElementById('export-btn');
+            const importBtn = document.getElementById('import-btn');
+            const importFile = document.getElementById('import-file');
+            const fileNameSpan = document.getElementById('file-name');
+            const fileLabelText = document.querySelector('.file-label-text');
+
+            // State
+            let currentDate = new Date();
+            let selectedDate = null;
+            let todos = JSON.parse(localStorage.getItem('todos')) || {};
+            let remindersTimeouts = {};
+            let darkMode = localStorage.getItem('darkMode') === 'true';
+
+            // Dark mode init
+            if (darkMode) document.body.classList.add('dark-mode');
+
+            // Initialize calendar
+            function initCalendar() {
+                renderCalendar();
+                updateSelectedDateDisplay();
+            }
+
+            // Render calendar for current month
+            function renderCalendar() {
+                calendarDaysEl.innerHTML = '';
+
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+
+                monthNameEl.textContent = new Date(year, month).toLocaleDateString('en-US', {
+                    month: 'long',
+                    year: 'numeric'
+                });
+
+                const firstDayOfMonth = new Date(year, month, 1);
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const startingDay = firstDayOfMonth.getDay() === 0 ? 6 : firstDayOfMonth.getDay() - 1;
+
+                // Previous month days
+                const prevMonthLastDay = new Date(year, month, 0).getDate();
+                for (let i = startingDay - 1; i >= 0; i--) {
+                    const day = prevMonthLastDay - i;
+                    const dateStr = formatDate(new Date(year, month - 1, day));
+                    calendarDaysEl.appendChild(createDayElement(day, dateStr, true));
+                }
+
+                // Current month days
+                const today = new Date();
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(year, month, day);
+                    const dateStr = formatDate(date);
+                    const isToday = date.toDateString() === today.toDateString();
+                    calendarDaysEl.appendChild(createDayElement(day, dateStr, false, isToday));
+                }
+
+                // Next month days
+                const totalCells = Math.ceil((startingDay + daysInMonth) / 7) * 7;
+                const nextMonthDays = totalCells - (startingDay + daysInMonth);
+                for (let day = 1; day <= nextMonthDays; day++) {
+                    const dateStr = formatDate(new Date(year, month + 1, day));
+                    calendarDaysEl.appendChild(createDayElement(day, dateStr, true));
+                }
+
+                // Mark days with todos
+                markDaysWithTodos();
+            }
+
+            // Create day element
+            function createDayElement(day, dateStr, isOtherMonth, isToday = false) {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'day';
+                if (isOtherMonth) dayEl.classList.add('other-month');
+                if (isToday) dayEl.classList.add('today');
+                if (dateStr === selectedDate) dayEl.classList.add('selected');
+
+                dayEl.innerHTML = `<div class="day-number">${day}</div>`;
+                dayEl.dataset.date = dateStr;
+
+                dayEl.addEventListener('click', () => {
+                    selectedDate = dateStr;
+                    updateSelectedDateDisplay();
+                    renderTodoList();
+                    renderCalendar(); // Re-render to update selected day styling
+                });
+
+                return dayEl;
+            }
+
+            // Format date as YYYY-MM-DD
+            function formatDate(date) {
+                const d = new Date(date);
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            // Update selected date display
+            function updateSelectedDateDisplay() {
+                if (selectedDate) {
+                    const date = new Date(selectedDate);
+                    selectedDateDisplay.textContent = date.toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                } else {
+                    selectedDateDisplay.textContent = 'No date selected';
+                }
+            }
+
+            // Mark days with todos
+            function markDaysWithTodos() {
+                Object.keys(todos).forEach(date => {
+                    const dayEl = document.querySelector(`.day[data-date="${date}"]`);
+                    if (dayEl && todos[date].length > 0) {
+                        dayEl.classList.add('has-todo');
+                    }
+                });
+            }
+
+            // Helper: get filtered todos for search
+            function getFilteredTodos() {
+                if (!selectedDate) return [];
+                let dateTodos = todos[selectedDate] || [];
+                const keyword = searchBar.value.trim().toLowerCase();
+                if (!keyword) return dateTodos;
+                return dateTodos.filter(todo =>
+                    todo.text.toLowerCase().includes(keyword) ||
+                    (todo.category && todo.category.toLowerCase().includes(keyword)) ||
+                    (todo.subtasks && todo.subtasks.some(st => st.text.toLowerCase().includes(keyword)))
+                );
+            }
+
+            // Render todo list for selected date
+            function renderTodoList() {
+                todoListEl.innerHTML = '';
+
+                if (!selectedDate) return;
+
+                const dateTodos = getFilteredTodos();
+
+                if (dateTodos.length === 0) {
+                    const emptyMsg = document.createElement('li');
+                    emptyMsg.textContent = 'No tasks for this day';
+                    emptyMsg.style.color = '#95a5a6';
+                    emptyMsg.style.textAlign = 'center';
+                    emptyMsg.style.padding = '20px';
+                    todoListEl.appendChild(emptyMsg);
+                    return;
+                }
+
+                dateTodos.forEach((todo, index) => {
+                    const todoItem = document.createElement('li');
+                    todoItem.className = 'todo-item priority-' + (todo.priority || 'medium') + (todo.completed ? ' task-completed' : '');
+                    
+                    // Completion checkbox
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = !!todo.completed;
+                    checkbox.style.marginRight = '8px';
+                    checkbox.addEventListener('change', function() {
+                        toggleTaskCompleted(index);
+                    });
+                    
+                    // Create todo item header
+                    const todoItemHeader = document.createElement('div');
+                    todoItemHeader.className = 'todo-item-header';
+                    
+                    // Editable text
+                    const todoText = document.createElement('span');
+                    todoText.className = 'todo-text';
+                    todoText.textContent = todo.text;
+                    todoText.contentEditable = true;
+                    todoText.spellcheck = false;
+                    todoText.addEventListener('blur', function() {
+                        editTodoText(index, todoText.textContent);
+                    });
+                    
+                    // Priority label
+                    const priorityLabel = document.createElement('span');
+                    priorityLabel.className = 'priority-label';
+                    priorityLabel.textContent = todo.priority ? todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1) : 'Medium';
+                    
+                    // Category/tag
+                    const categoryTag = document.createElement('span');
+                    categoryTag.className = 'category-tag';
+                    categoryTag.textContent = todo.category || '';
+                    
+                    // Reminder icon
+                    const reminderIcon = document.createElement('span');
+                    if (todo.reminder) {
+                        reminderIcon.innerHTML = '⏰';
+                        reminderIcon.title = 'Reminder set for ' + new Date(todo.reminder).toLocaleString();
+                        reminderIcon.style.marginLeft = '6px';
+                    }
+                    
+                    // Recurrence icon
+                    const recurrenceIcon = document.createElement('span');
+                    if (todo.recurrence) {
+                        recurrenceIcon.innerHTML = '🔁';
+                        recurrenceIcon.title = 'Repeats: ' + todo.recurrence;
+                        recurrenceIcon.style.marginLeft = '6px';
+                    }
+                    
+                    // Attachments
+                    const attachmentsDiv = document.createElement('span');
+                    if (todo.attachments && todo.attachments.length > 0) {
+                        todo.attachments.forEach((att, attIdx) => {
+                            const a = document.createElement('a');
+                            a.href = att.url;
+                            a.target = '_blank';
+                            a.textContent = '📎';
+                            a.title = att.name;
+                            a.style.marginLeft = '4px';
+                            attachmentsDiv.appendChild(a);
+                        });
+                    }
+                    
+                    // Edit and delete buttons
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'delete-btn';
+                    editBtn.innerHTML = '<i class="fas fa-pen"></i>';
+                    editBtn.title = 'Edit';
+                    editBtn.style.background = '#f1c40f';
+                    editBtn.style.color = '#fff';
+                    editBtn.addEventListener('click', function() {
+                        editTodoPrompt(index);
+                    });
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.dataset.index = index;
+                    deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+                    
+                    // Assemble header
+                    todoItemHeader.appendChild(checkbox);
+                    todoItemHeader.appendChild(todoText);
+                    todoItemHeader.appendChild(priorityLabel);
+                    if (todo.category) todoItemHeader.appendChild(categoryTag);
+                    if (todo.reminder) todoItemHeader.appendChild(reminderIcon);
+                    if (todo.recurrence) todoItemHeader.appendChild(recurrenceIcon);
+                    if (todo.attachments && todo.attachments.length > 0) todoItemHeader.appendChild(attachmentsDiv);
+                    todoItemHeader.appendChild(editBtn);
+                    todoItemHeader.appendChild(deleteBtn);
+                    
+                    // Subtask container
+                    const subtaskContainer = document.createElement('div');
+                    subtaskContainer.className = 'subtask-container';
+                    
+                    // Add subtask input
+                    const subtaskInputContainer = document.createElement('div');
+                    subtaskInputContainer.className = 'subtask-input-container';
+                    
+                    const subtaskInput = document.createElement('input');
+                    subtaskInput.className = 'subtask-input';
+                    subtaskInput.type = 'text';
+                    subtaskInput.placeholder = 'Add a subtask...';
+                    
+                    const addSubtaskBtn = document.createElement('button');
+                    addSubtaskBtn.className = 'add-subtask-btn';
+                    addSubtaskBtn.textContent = 'Add';
+                    addSubtaskBtn.dataset.index = index;
+                    
+                    subtaskInputContainer.appendChild(subtaskInput);
+                    subtaskInputContainer.appendChild(addSubtaskBtn);
+                    
+                    // Add subtask list
+                    const subtaskList = document.createElement('div');
+                    subtaskList.className = 'subtask-list';
+                    
+                    // Render existing subtasks
+                    if (todo.subtasks && todo.subtasks.length > 0) {
+                        todo.subtasks.forEach((subtask, subIndex) => {
+                            const subtaskItem = document.createElement('div');
+                            subtaskItem.className = 'subtask-item';
+                            
+                            // Completion checkbox
+                            const subCheckbox = document.createElement('input');
+                            subCheckbox.type = 'checkbox';
+                            subCheckbox.checked = !!subtask.completed;
+                            subCheckbox.className = 'subtask-toggle';
+                            subCheckbox.addEventListener('change', function() {
+                                toggleSubtask(index, subIndex);
+                            });
+                            
+                            // Editable subtask text
+                            const subtaskText = document.createElement('span');
+                            subtaskText.className = 'subtask-text' + (subtask.completed ? ' completed' : '');
+                            subtaskText.textContent = subtask.text;
+                            subtaskText.contentEditable = true;
+                            subtaskText.spellcheck = false;
+                            subtaskText.addEventListener('blur', function() {
+                                editSubtaskText(index, subIndex, subtaskText.textContent);
+                            });
+                            
+                            // Edit and delete buttons
+                            const subEditBtn = document.createElement('button');
+                            subEditBtn.className = 'subtask-delete-btn';
+                            subEditBtn.innerHTML = '✎';
+                            subEditBtn.style.background = '#f1c40f';
+                            subEditBtn.style.color = '#fff';
+                            subEditBtn.addEventListener('click', function() {
+                                editSubtaskPrompt(index, subIndex);
+                            });
+                            
+                            const subtaskDeleteBtn = document.createElement('button');
+                            subtaskDeleteBtn.className = 'subtask-delete-btn';
+                            subtaskDeleteBtn.innerHTML = '×';
+                            subtaskDeleteBtn.dataset.index = index;
+                            subtaskDeleteBtn.dataset.subIndex = subIndex;
+                            subtaskDeleteBtn.addEventListener('click', function() {
+                                deleteSubtask(index, subIndex);
+                            });
+                            
+                            subtaskItem.appendChild(subCheckbox);
+                            subtaskItem.appendChild(subtaskText);
+                            subtaskItem.appendChild(subEditBtn);
+                            subtaskItem.appendChild(subtaskDeleteBtn);
+                            subtaskList.appendChild(subtaskItem);
+                        });
+                    }
+                    
+                    subtaskContainer.appendChild(subtaskInputContainer);
+                    subtaskContainer.appendChild(subtaskList);
+                    
+                    // Progress bar
+                    if (todo.subtasks && todo.subtasks.length > 0) {
+                        const completedCount = todo.subtasks.filter(s => s.completed).length;
+                        const progressBarBg = document.createElement('div');
+                        progressBarBg.className = 'progress-bar-bg';
+                        const progressBar = document.createElement('div');
+                        progressBar.className = 'progress-bar';
+                        progressBar.style.width = (100 * completedCount / todo.subtasks.length) + '%';
+                        progressBarBg.appendChild(progressBar);
+                        subtaskContainer.appendChild(progressBarBg);
+                        const subtaskCount = document.createElement('span');
+                        subtaskCount.className = 'subtask-count';
+                        subtaskCount.textContent = `(${completedCount}/${todo.subtasks.length} completed)`;
+                        todoText.appendChild(subtaskCount);
+                    }
+                    
+                    // Assemble todo item
+                    todoItem.appendChild(todoItemHeader);
+                    todoItem.appendChild(subtaskContainer);
+                    todoListEl.appendChild(todoItem);
+                    
+                    // Add event listeners
+                    deleteBtn.addEventListener('click', function() {
+                        deleteTodo(index);
+                    });
+                    
+                    addSubtaskBtn.addEventListener('click', function() {
+                        const text = subtaskInput.value.trim();
+                        if (text) {
+                            addSubtask(index, text);
+                            subtaskInput.value = '';
+                        }
+                    });
+                    
+                    subtaskInput.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            const text = this.value.trim();
+                            if (text) {
+                                addSubtask(index, text);
+                                this.value = '';
+                            }
+                        }
+                    });
+                });
+            }
+
+            // Add new todo
+            function addTodo() {
+                if (!selectedDate) {
+                    alert('Please select a date first');
+                    return;
+                }
+
+                const text = todoInput.value.trim();
+                if (!text) return;
+
+                const priority = prioritySelect.value;
+                const category = categoryInput.value.trim();
+                const reminder = reminderInput.value ? new Date(reminderInput.value).toISOString() : null;
+                const recurrence = recurrenceSelect.value;
+                let attachments = [];
+                if (attachmentInput.files && attachmentInput.files.length > 0) {
+                    for (let i = 0; i < attachmentInput.files.length; i++) {
+                        const file = attachmentInput.files[i];
+                        const url = URL.createObjectURL(file);
+                        attachments.push({ name: file.name, url });
+                    }
+                }
+
+                if (!todos[selectedDate]) todos[selectedDate] = [];
+
+                const todoObj = {
+                    text,
+                    priority,
+                    category,
+                    reminder,
+                    recurrence,
+                    completed: false,
+                    subtasks: [],
+                    attachments
+                };
+
+                todos[selectedDate].push(todoObj);
+                saveTodos();
+                todoInput.value = '';
+                categoryInput.value = '';
+                reminderInput.value = '';
+                recurrenceSelect.value = '';
+                attachmentInput.value = '';
+                renderTodoList();
+                renderCalendar();
+                if (reminder) scheduleReminder(selectedDate, todos[selectedDate].length - 1, reminder, text);
+            }
+
+            // Edit todo text
+            function editTodoText(index, newText) {
+                if (!selectedDate || !todos[selectedDate] || !todos[selectedDate][index]) return;
+                todos[selectedDate][index].text = newText;
+                saveTodos();
+                renderTodoList();
+            }
+
+            // Edit subtask text
+            function editSubtaskText(todoIndex, subIndex, newText) {
+                if (!selectedDate || !todos[selectedDate] || !todos[selectedDate][todoIndex] ||
+                    !todos[selectedDate][todoIndex].subtasks || !todos[selectedDate][todoIndex].subtasks[subIndex]) return;
+                todos[selectedDate][todoIndex].subtasks[subIndex].text = newText;
+                saveTodos();
+                renderTodoList();
+            }
+
+            // Edit todo prompt
+            function editTodoPrompt(index) {
+                const todo = todos[selectedDate][index];
+                const newText = prompt('Edit task:', todo.text);
+                if (newText !== null) {
+                    todo.text = newText;
+                    saveTodos();
+                    renderTodoList();
+                }
+            }
+
+            // Edit subtask prompt
+            function editSubtaskPrompt(todoIndex, subIndex) {
+                const subtask = todos[selectedDate][todoIndex].subtasks[subIndex];
+                const newText = prompt('Edit subtask:', subtask.text);
+                if (newText !== null) {
+                    subtask.text = newText;
+                    saveTodos();
+                    renderTodoList();
+                }
+            }
+
+            // Toggle task completed
+            function toggleTaskCompleted(index) {
+                if (!selectedDate || !todos[selectedDate] || !todos[selectedDate][index]) return;
+                todos[selectedDate][index].completed = !todos[selectedDate][index].completed;
+                saveTodos();
+                renderTodoList();
+                renderCalendar();
+            }
+
+            // Add subtask to a todo
+            function addSubtask(todoIndex, text) {
+                if (!selectedDate || !todos[selectedDate] || !todos[selectedDate][todoIndex]) return;
+                
+                if (!todos[selectedDate][todoIndex].subtasks) {
+                    todos[selectedDate][todoIndex].subtasks = [];
+                }
+                
+                todos[selectedDate][todoIndex].subtasks.push({
+                    text: text,
+                    completed: false
+                });
+                
+                saveTodos();
+                renderTodoList();
+            }
+
+            // Toggle subtask completion status
+            function toggleSubtask(todoIndex, subtaskIndex) {
+                if (!selectedDate || !todos[selectedDate] || !todos[selectedDate][todoIndex] || 
+                    !todos[selectedDate][todoIndex].subtasks || !todos[selectedDate][todoIndex].subtasks[subtaskIndex]) return;
+                
+                todos[selectedDate][todoIndex].subtasks[subtaskIndex].completed = 
+                    !todos[selectedDate][todoIndex].subtasks[subtaskIndex].completed;
+                
+                saveTodos();
+                renderTodoList();
+            }
+
+            // Delete subtask
+            function deleteSubtask(todoIndex, subtaskIndex) {
+                if (!selectedDate || !todos[selectedDate] || !todos[selectedDate][todoIndex] || 
+                    !todos[selectedDate][todoIndex].subtasks || !todos[selectedDate][todoIndex].subtasks[subtaskIndex]) return;
+                
+                todos[selectedDate][todoIndex].subtasks.splice(subtaskIndex, 1);
+                saveTodos();
+                renderTodoList();
+            }
+
+            // Delete todo
+            function deleteTodo(index) {
+                if (!selectedDate || !todos[selectedDate]) return;
+
+                todos[selectedDate].splice(index, 1);
+                if (todos[selectedDate].length === 0) {
+                    delete todos[selectedDate];
+                }
+                saveTodos();
+                renderTodoList();
+                renderCalendar(); // Update calendar to remove todo indicator if needed
+            }
+
+            // Reset todos for selected date
+            function resetTodos() {
+                if (!selectedDate) return;
+                if (confirm('Are you sure you want to clear all tasks for this day?')) {
+                    delete todos[selectedDate];
+                    saveTodos();
+                    renderTodoList();
+                    renderCalendar();
+                }
+            }
+
+            // Reset all todos
+            function resetAllTodos() {
+                if (confirm('Are you sure you want to clear ALL tasks?')) {
+                    todos = {};
+                    saveTodos();
+                    renderTodoList();
+                    renderCalendar();
+                }
+            }
+
+            // Print todos
+            function printTodos() {
+                window.print();
+            }
+
+            // Save todos to localStorage
+            function saveTodos() {
+                localStorage.setItem('todos', JSON.stringify(todos));
+            }
+
+            // Reminders
+            function scheduleReminder(date, index, reminderISO, text) {
+                const now = Date.now();
+                const reminderTime = new Date(reminderISO).getTime();
+                if (reminderTime > now) {
+                    const timeout = setTimeout(() => {
+                        if (window.Notification && Notification.permission === "granted") {
+                            new Notification("Task Reminder", { body: text });
+                        } else {
+                            alert("Reminder: " + text);
+                        }
+                    }, reminderTime - now);
+                    remindersTimeouts[date + '-' + index] = timeout;
+                }
+            }
+
+            // Request notification permission
+            if (window.Notification && Notification.permission !== "granted") {
+                Notification.requestPermission();
+            }
+
+            // Reschedule all reminders on load
+            function rescheduleAllReminders() {
+                Object.keys(remindersTimeouts).forEach(k => clearTimeout(remindersTimeouts[k]));
+                remindersTimeouts = {};
+                Object.keys(todos).forEach(date => {
+                    todos[date].forEach((todo, idx) => {
+                        if (todo.reminder) scheduleReminder(date, idx, todo.reminder, todo.text);
+                    });
+                });
+            }
+
+            // Recurring tasks: on each day render, check for recurrence and add if needed
+            function handleRecurringTasks() {
+                const todayStr = formatDate(new Date());
+                Object.keys(todos).forEach(date => {
+                    todos[date].forEach(todo => {
+                        if (todo.recurrence && !todos[todayStr]?.some(t => t.text === todo.text)) {
+                            let shouldAdd = false;
+                            if (todo.recurrence === 'daily') shouldAdd = true;
+                            if (todo.recurrence === 'weekly' && new Date(date).getDay() === new Date().getDay()) shouldAdd = true;
+                            if (todo.recurrence === 'monthly' && new Date(date).getDate() === new Date().getDate()) shouldAdd = true;
+                            if (shouldAdd) {
+                                if (!todos[todayStr]) todos[todayStr] = [];
+                                todos[todayStr].push({ ...todo, reminder: null }); // Don't copy reminder
+                            }
+                        }
+                    });
+                });
+                saveTodos();
+            }
+
+            // Export/import
+            exportBtn.addEventListener('click', function() {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(todos));
+                const dl = document.createElement('a');
+                dl.setAttribute('href', dataStr);
+                dl.setAttribute('download', 'tasks_backup.json');
+                dl.click();
+            });
+
+            importBtn.addEventListener('click', function() {
+                importFile.click();
+            });
+
+            importFile.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    try {
+                        const imported = JSON.parse(evt.target.result);
+                        if (typeof imported === 'object') {
+                            todos = imported;
+                            saveTodos();
+                            renderTodoList();
+                            renderCalendar();
+                            rescheduleAllReminders();
+                        }
+                    } catch (err) { alert('Invalid file'); }
+                };
+                reader.readAsText(file);
+            });
+
+            // Search/filter
+            searchBar.addEventListener('input', renderTodoList);
+
+            // Dark mode
+            darkModeToggle.addEventListener('click', function() {
+                darkMode = !darkMode;
+                document.body.classList.toggle('dark-mode', darkMode);
+                localStorage.setItem('darkMode', darkMode);
+            });
+
+            // PDF Export
+            exportBtn.addEventListener('click', function() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                let y = 15;
+                doc.setFontSize(18);
+                doc.text("Tasks for " + (selectedDate || "No date selected"), 10, y);
+                y += 10;
+                doc.setFontSize(12);
+                const dateTodos = selectedDate ? (todos[selectedDate] || []) : [];
+                if (dateTodos.length === 0) {
+                    doc.text("No tasks for this day.", 10, y);
+                } else {
+                    dateTodos.forEach((todo, idx) => {
+                        let txt = `${idx + 1}. [${todo.completed ? "x" : " "}] ${todo.text} (${todo.priority || "medium"})`;
+                        if (todo.category) txt += ` [${todo.category}]`;
+                        doc.text(txt, 10, y);
+                        y += 8;
+                        if (todo.subtasks && todo.subtasks.length > 0) {
+                            todo.subtasks.forEach((sub, sidx) => {
+                                doc.text(`   - [${sub.completed ? "x" : " "}] ${sub.text}`, 14, y);
+                                y += 7;
+                            });
+                        }
+                        if (todo.attachments && todo.attachments.length > 0) {
+                            todo.attachments.forEach(att => {
+                                doc.text(`   📎 ${att.name}`, 14, y);
+                                y += 7;
+                            });
+                        }
+                        if (todo.reminder) {
+                            doc.text(`   ⏰ Reminder: ${new Date(todo.reminder).toLocaleString()}`, 14, y);
+                            y += 7;
+                        }
+                        if (todo.recurrence) {
+                            doc.text(`   🔁 Repeats: ${todo.recurrence}`, 14, y);
+                            y += 7;
+                        }
+                        y += 2;
+                        if (y > 270) { doc.addPage(); y = 15; }
+                    });
+                }
+                doc.save('tasks.pdf');
+            });
+
+            // Show selected file name in custom file input
+            attachmentInput.addEventListener('change', function() {
+                if (attachmentInput.files && attachmentInput.files.length > 0) {
+                    fileNameSpan.textContent = attachmentInput.files[0].name;
+                    fileLabelText.textContent = "File Selected";
+                } else {
+                    fileNameSpan.textContent = "";
+                    fileLabelText.textContent = "Choose File";
+                }
+            });
+
+            // Event listeners
+            prevMonthBtn.addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+                renderCalendar();
+            });
+
+            nextMonthBtn.addEventListener('click', () => {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                renderCalendar();
+            });
+
+            addTodoBtn.addEventListener('click', addTodo);
+            todoInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addTodo();
+            });
+
+            resetTodoBtn.addEventListener('click', resetTodos);
+            allResetTodoBtn.addEventListener('click', resetAllTodos);
+            printBtn.addEventListener('click', printTodos);
+
+            // Initialize
+            initCalendar();
+            rescheduleAllReminders();
+            handleRecurringTasks();
+        });
+    </script>
+</body>
+</html>
